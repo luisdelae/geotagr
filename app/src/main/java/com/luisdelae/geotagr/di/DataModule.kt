@@ -2,7 +2,7 @@ package com.luisdelae.geotagr.di
 
 import android.content.Context
 import com.luisdelae.geotagr.GeoTagrApplication
-import com.luisdelae.geotagr.LocationManager
+import com.luisdelae.geotagr.data.LocationManager
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn

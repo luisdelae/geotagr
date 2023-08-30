@@ -6,7 +6,7 @@ xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:padding="20dp"
-    tools:context=".GeoTagrFragment">
+    tools:context=".ui.GeoTagrFragment">
 
     <com.google.android.material.textfield.TextInputLayout
         android:id="@+id/input_layout_notification_text"

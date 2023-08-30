@@ -1,6 +1,6 @@
 @file:Suppress("PrivatePropertyName")
 
-package com.luisdelae.geotagr
+package com.luisdelae.geotagr.services
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -14,13 +14,14 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
+import com.luisdelae.geotagr.R
 import com.luisdelae.geotagr.data.LocationRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class GeoTagrLocationService : LifecycleService() {
+class GeoTagrLocationForegroundService : LifecycleService() {
     private val TAG = "GeoTagrLocationService"
 
     private val FOREGROUND_SERVICE_NOTIFICATION_ID = 3556465
@@ -118,7 +119,7 @@ class GeoTagrLocationService : LifecycleService() {
     }
 
     fun startGeoTagrForegroundService() {
-        startService(Intent(applicationContext, GeoTagrLocationService::class.java))
+        startService(Intent(applicationContext, GeoTagrLocationForegroundService::class.java))
 
         lifecycleScope.launch {
             locationRepository.isInGeofenceFlow.collect { enteredGeofence ->
@@ -207,7 +208,7 @@ class GeoTagrLocationService : LifecycleService() {
     }
 
     inner class LocalBinder : Binder() {
-        internal val service: GeoTagrLocationService
-            get() = this@GeoTagrLocationService
+        internal val service: GeoTagrLocationForegroundService
+            get() = this@GeoTagrLocationForegroundService
     }
 }

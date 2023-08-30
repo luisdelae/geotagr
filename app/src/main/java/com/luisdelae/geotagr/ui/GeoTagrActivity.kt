@@ -1,18 +1,15 @@
-package com.luisdelae.geotagr
+package com.luisdelae.geotagr.ui
 
-import android.content.ComponentName
-import android.content.Context
 import android.content.Intent
-import android.content.ServiceConnection
 import android.os.Bundle
-import android.os.IBinder
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
+import com.luisdelae.geotagr.R
 import com.luisdelae.geotagr.databinding.ActivityGeoTagrBinding
+import com.luisdelae.geotagr.services.GeoTagrLocationForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 
 
@@ -25,7 +22,7 @@ class GeoTagrActivity : AppCompatActivity() {
     private var foregroundOnlyLocationServiceBound = false
 
     // Provides location updates for while-in-use feature.
-    private var foregroundOnlyLocationService: GeoTagrLocationService? = null
+    private var foregroundOnlyLocationService: GeoTagrLocationForegroundService? = null
 
 //    private val foregroundOnlyServiceConnection = object : ServiceConnection {
 //
@@ -59,7 +56,7 @@ class GeoTagrActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
 
-        val serviceIntent = Intent(this, GeoTagrLocationService::class.java)
+        val serviceIntent = Intent(this, GeoTagrLocationForegroundService::class.java)
         startForegroundService(serviceIntent)
 //        bindService(serviceIntent, foregroundOnlyServiceConnection, Context.BIND_AUTO_CREATE)
     }

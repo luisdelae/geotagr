@@ -1,4 +1,4 @@
-package com.luisdelae.geotagr.ui
+package com.luisdelae.geotagr
 
 import android.content.Context
 import android.widget.Toast
@@ -28,7 +28,6 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
-import com.luisdelae.geotagr.R
 
 @OptIn(ExperimentalPermissionsApi::class, ExperimentalMaterial3Api::class)
 @Composable

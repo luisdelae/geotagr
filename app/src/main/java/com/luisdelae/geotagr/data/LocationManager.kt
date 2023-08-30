@@ -1,6 +1,6 @@
 @file:Suppress("PrivatePropertyName")
 
-package com.luisdelae.geotagr
+package com.luisdelae.geotagr.data
 
 import android.annotation.SuppressLint
 import android.content.Context

@@ -1,4 +1,4 @@
-package com.luisdelae.geotagr.ui
+package com.luisdelae.geotagr.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope

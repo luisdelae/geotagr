@@ -28,10 +28,10 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyAq2esssGXDqe8N55hbZ0fK0xMHY61sAzg" />
 
-        <service android:name=".GeoTagrLocationService" android:foregroundServiceType="location" />
+        <service android:name=".services.GeoTagrLocationForegroundService" android:foregroundServiceType="location" />
 
         <activity
-            android:name=".GeoTagrActivity"
+            android:name=".ui.GeoTagrActivity"
             android:exported="true"
             android:label="@string/title_activity_geo_tagr"
             android:theme="@style/Theme.GeoTagr">

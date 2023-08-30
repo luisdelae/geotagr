@@ -1,7 +1,6 @@
 package com.luisdelae.geotagr.data
 
 import androidx.lifecycle.MutableLiveData
-import com.luisdelae.geotagr.LocationManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton

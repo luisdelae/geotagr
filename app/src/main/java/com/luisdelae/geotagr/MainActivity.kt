@@ -17,7 +17,6 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.MultiplePermissionsState
 import com.google.accompanist.permissions.PermissionState
 import com.google.accompanist.permissions.rememberMultiplePermissionsState
-import com.luisdelae.geotagr.ui.GeoTagrScreen
 import com.luisdelae.geotagr.ui.theme.GeoTagrTheme
 import dagger.hilt.android.AndroidEntryPoint
 
