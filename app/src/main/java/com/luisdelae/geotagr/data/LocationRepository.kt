@@ -1,24 +1,26 @@
 package com.luisdelae.geotagr.data
 
-import android.content.Context
 import androidx.lifecycle.MutableLiveData
 import com.luisdelae.geotagr.LocationManager
-import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.flow.MutableStateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class LocationRepository @Inject constructor(
-    @ApplicationContext private val appContext: Context,
     private val locationManager: LocationManager
 ) {
-    private var _geoFenceRequestCreated = locationManager.geoFenceRequestCreated
+    private var _geoFenceRequestCreated: MutableStateFlow<Boolean?> = locationManager.geoFenceRequestCreated
+    val geoFenceRequestCreatedLiveData get(): MutableStateFlow<Boolean?> = _geoFenceRequestCreated
 
-    val geoFenceRequestCreatedLiveData get() = _geoFenceRequestCreated
 
     val receivedGeofenceEvent = MutableLiveData<Boolean>()
 
-    fun createGeoFenceOnCurrentLocation(key: String, radius: Float) {
-        locationManager.createGeofenceAroundCurrentLocation(key, radius)
+
+    private var _isInGeofenceFlow: MutableStateFlow<Boolean?> = locationManager.isInGeofenceFlow
+    val isInGeofenceFlow get(): MutableStateFlow<Boolean?> = _isInGeofenceFlow
+
+    fun createGeoFenceOnCurrentLocation(radius: Float, geofenceNotificationMessage: String) {
+        locationManager.createGeofenceAroundCurrentLocation(radius, geofenceNotificationMessage)
     }
 }

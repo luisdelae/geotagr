@@ -3,68 +3,108 @@
 package com.luisdelae.geotagr
 
 import android.annotation.SuppressLint
-import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.location.Location
-import android.os.Build
 import android.os.Looper
 import android.util.Log
-import androidx.lifecycle.MutableLiveData
-import com.google.android.gms.location.Geofence
-import com.google.android.gms.location.Geofence.GEOFENCE_TRANSITION_ENTER
-import com.google.android.gms.location.Geofence.GEOFENCE_TRANSITION_EXIT
-import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationCallback
 import com.google.android.gms.location.LocationRequest
 import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.launch
 import kotlin.math.asin
 import kotlin.math.cos
 import kotlin.math.pow
 import kotlin.math.sin
 import kotlin.math.sqrt
 
-class LocationManager(context: Context) {
+class LocationManager(context: Context, val externalScope: CoroutineScope) {
     private val TAG = "LocationManager"
 
     private val locationClient = LocationServices.getFusedLocationProviderClient(context)
-    private val geofenceClient = LocationServices.getGeofencingClient(context)
 
     private var _originalLocation: Location? = null
     private var _radiusInMeters = 10F
+    private var _geofenceNotificationMessage = ""
+
+    private var _geoFenceRequestCreated = MutableStateFlow<Boolean?>(null)
+    val geoFenceRequestCreated get() = _geoFenceRequestCreated
+
+
+    private var _isInGeofenceFlow = MutableStateFlow<Boolean?>(null)
+    val isInGeofenceFlow get() = _isInGeofenceFlow
 
     private val locationUpdateCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
             super.onLocationResult(locationResult)
 
-
             locationResult.lastLocation?.let { lastLocation ->
                 Log.d(TAG, "$lastLocation")
 
                 _originalLocation?.let { origLocation ->
-                    Log.d(TAG, "${isWithinGeoFence(origLocation, lastLocation, _radiusInMeters)}")
+                    val isWithinGeofence = isWithinGeoFence(origLocation, lastLocation, _radiusInMeters)
+                    Log.d(TAG, "isWithinGeofence: $isWithinGeofence")
+                    externalScope.launch {
+                        _isInGeofenceFlow.emit(isWithinGeofence)
+                    }
                 }
             }
         }
     }
 
     @SuppressLint("MissingPermission")
-    fun createGeofenceAroundCurrentLocation(key: String, radiusInMeters: Float = 10.0f) {
+    fun createGeofenceAroundCurrentLocation(
+        radiusInMeters: Float = 10.0f,
+        geofenceNotificationMessage: String = ""
+    ) {
+        resetFlows()
+
         _radiusInMeters = radiusInMeters
+        _geofenceNotificationMessage = geofenceNotificationMessage
 
         locationClient.getCurrentLocation(
             Priority.PRIORITY_HIGH_ACCURACY,
             CancellationTokenSource().token
         ).addOnSuccessListener {
-            _originalLocation = it
-            val locationRequest = LocationRequest
-                .Builder(Priority.PRIORITY_HIGH_ACCURACY, 5000).build()
+            Log.d(TAG, "Current location acquired.")
 
-            locationClient.requestLocationUpdates(locationRequest, locationUpdateCallback, Looper.getMainLooper())
+            _originalLocation = it
+
+            createLocationUpdateRequest()
         }
+    }
+
+    private fun resetFlows() {
+        externalScope.launch {
+            _geoFenceRequestCreated.emit(null)
+            _isInGeofenceFlow.emit(null)
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    private fun createLocationUpdateRequest() {
+        val locationRequest = LocationRequest
+            .Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000).build()
+
+        locationClient.requestLocationUpdates(
+            locationRequest, locationUpdateCallback, Looper.getMainLooper())
+            .addOnSuccessListener {
+                Log.d(TAG, "Location update request created.")
+                externalScope.launch {
+                    _geoFenceRequestCreated.emit(true)
+                }
+            }
+            .addOnFailureListener {
+                Log.d(TAG, "Location update request failed to create.")
+
+                externalScope.launch {
+                    _geoFenceRequestCreated.emit(false)
+                }
+            }
     }
 
     private fun isWithinGeoFence(originalLocation: Location, currentLocation: Location, radiusInMeters: Float): Boolean {
@@ -77,72 +117,5 @@ class LocationManager(context: Context) {
         val earthRadiusMeters = 6371000.0F
 
         return (circuit * earthRadiusMeters) < radiusInMeters
-    }
-
-
-
-
-
-
-
-    private var _geoFenceRequestCreated = MutableLiveData<Boolean>()
-
-    val geoFenceRequestCreated get() = _geoFenceRequestCreated
-
-    private val geofencingPendingIntent by lazy {
-        PendingIntent.getBroadcast(
-            context,
-            0,
-            Intent(context, GeoTagrBroadcastReceiver::class.java),
-            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-                PendingIntent.FLAG_UPDATE_CURRENT
-            } else {
-                PendingIntent.FLAG_IMMUTABLE
-            }
-        )
-    }
-
-    @SuppressLint("MissingPermission")
-    fun createGeofenceAroundCurrentLocation2(key: String, radiusInMeters: Float = 10.0f) {
-        locationClient.getCurrentLocation(
-            Priority.PRIORITY_HIGH_ACCURACY,
-            CancellationTokenSource().token
-        ).addOnSuccessListener {
-            val geoFence = createGeofence(key, it, radiusInMeters)
-            registerGeofence(geoFence)
-        }
-    }
-
-    private fun createGeofence(
-        key: String,
-        location: Location,
-        radiusInMeters: Float
-    ): Geofence {
-        return Geofence.Builder()
-            .setRequestId(key)
-            .setCircularRegion(location.latitude, location.longitude, radiusInMeters)
-            .setExpirationDuration(Geofence.NEVER_EXPIRE)
-            .setNotificationResponsiveness(5000)
-            .setTransitionTypes(GEOFENCE_TRANSITION_ENTER or GEOFENCE_TRANSITION_EXIT)
-            .build()
-    }
-
-    private fun createGeofencingRequest(geofence: Geofence): GeofencingRequest {
-        return GeofencingRequest.Builder().apply {
-            setInitialTrigger(GeofencingRequest.INITIAL_TRIGGER_ENTER)
-            addGeofence(geofence)
-        }.build()
-    }
-
-    @SuppressLint("MissingPermission")
-    private fun registerGeofence(geofence: Geofence) {
-        geofenceClient.addGeofences(createGeofencingRequest(geofence), geofencingPendingIntent)
-            .addOnSuccessListener {
-                Log.d(TAG, "registerGeofence: SUCCESS")
-                _geoFenceRequestCreated.value = true
-            }.addOnFailureListener { exception ->
-                _geoFenceRequestCreated.value = false
-                Log.d(TAG, "registerGeofence: Failure\n$exception")
-            }
     }
 }

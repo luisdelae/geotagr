@@ -28,9 +28,7 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyAq2esssGXDqe8N55hbZ0fK0xMHY61sAzg" />
 
-        <receiver android:name=".GeoTagrBroadcastReceiver" android:allowBackup="true"
-            android:directBootAware="true"
-            android:enabled="true" />
+        <service android:name=".GeoTagrLocationService" android:foregroundServiceType="location" />
 
         <activity
             android:name=".GeoTagrActivity"

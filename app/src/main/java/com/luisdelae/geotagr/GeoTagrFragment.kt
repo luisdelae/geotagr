@@ -1,6 +1,7 @@
 package com.luisdelae.geotagr
 
 import android.Manifest
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
@@ -9,9 +10,12 @@ import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.lifecycleScope
 import com.luisdelae.geotagr.databinding.FragmentGeotagrBinding
 import com.luisdelae.geotagr.ui.GeoTagrViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+
 
 @AndroidEntryPoint
 class GeoTagrFragment : Fragment() {
@@ -40,22 +44,34 @@ class GeoTagrFragment : Fragment() {
         )
 
         binding.buttonFirst.setOnClickListener {
+            val message = binding.editNotificationText.text.toString()
             val radius = binding.editRadius.text.toString().toFloat()
-            viewModel.tagLocation(radius)
+
+            viewModel.tagLocation(radius, message)
         }
 
-        viewModel.geofenceRequestCreated.observe(viewLifecycleOwner) {
-            val createdText = if (it) {
-                "successful"
-            } else {
-                "unsuccessful"
+        lifecycleScope.launch {
+            viewModel.geofenceRequestCreated.collect { requestCreated ->
+                requestCreated?.let {
+                    val createdText = if (it) {
+                        "successful"
+                    } else {
+                        "unsuccessful"
+                    }
+
+                    Toast.makeText(requireContext(), "GeoFence request $createdText", Toast.LENGTH_SHORT).show()
+                }
             }
-
-            Toast.makeText(requireContext(), "GeoFence request $createdText", Toast.LENGTH_SHORT).show()
         }
 
-        viewModel.receivedGeofenceEvent.observe(viewLifecycleOwner) {
-            Toast.makeText(requireContext(), "GeoFence event happened!", Toast.LENGTH_LONG).show()
+        lifecycleScope.launch {
+            viewModel.isInGeofenceFlow.collect { isWithinGeofence ->
+                isWithinGeofence?.let {
+                    if (it) {
+                        Toast.makeText(requireContext(), "Entered geofence", Toast.LENGTH_SHORT).show()
+                    }
+                }
+            }
         }
     }
 

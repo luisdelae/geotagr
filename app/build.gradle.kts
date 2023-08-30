@@ -69,6 +69,7 @@ dependencies {
     implementation("com.google.accompanist:accompanist-permissions:0.32.0")
 
     implementation("com.google.dagger:hilt-android:2.47")
+    implementation("androidx.lifecycle:lifecycle-service:2.6.1")
     kapt ("com.google.dagger:hilt-compiler:2.47")
 
     implementation("com.google.android.gms:play-services-location:21.0.1")

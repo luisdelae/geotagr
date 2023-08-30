@@ -1,6 +1,7 @@
 package com.luisdelae.geotagr.di
 
 import android.content.Context
+import com.luisdelae.geotagr.GeoTagrApplication
 import com.luisdelae.geotagr.LocationManager
 import dagger.Module
 import dagger.Provides
@@ -18,6 +19,6 @@ class DataModule {
     fun provideLocationManager(
         @ApplicationContext context: Context
     ): LocationManager {
-        return LocationManager(context)
+        return LocationManager(context, (context.applicationContext as GeoTagrApplication).applicationScope)
     }
 }
