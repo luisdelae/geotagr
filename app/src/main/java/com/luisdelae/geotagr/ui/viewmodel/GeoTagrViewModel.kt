@@ -12,7 +12,7 @@ import javax.inject.Inject
 class GeoTagrViewModel @Inject internal constructor(
     private val locationRepository: LocationRepository
 ) : ViewModel() {
-    val geoFenceRequestCreatedFlow = locationRepository.geoFenceRequestCreatedFlow
+    val geoFenceRequestStatusFlow = locationRepository.geoFenceRequestStatusFlow
 
     val geofenceEventFlow = locationRepository.geofenceEventFlow
 

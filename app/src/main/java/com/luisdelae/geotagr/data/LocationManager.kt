@@ -17,6 +17,8 @@ import com.luisdelae.geotagr.data.model.GeoTagrEvent
 import com.luisdelae.geotagr.data.model.GeofenceEvent
 import com.luisdelae.geotagr.data.model.GeofenceRequest
 import com.luisdelae.geotagr.data.model.GeofenceRequestStatus
+import com.luisdelae.geotagr.utils.Constants.EARTH_RADIUS_METERS
+import com.luisdelae.geotagr.utils.Constants.LOCATION_UPDATE_INTERVAL
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -35,8 +37,8 @@ class LocationManager(context: Context, val externalScope: CoroutineScope) {
     private var _radiusInMeters = 10F
     private var _geofenceNotificationMessage = ""
 
-    private var _geoFenceRequestCreated = MutableStateFlow(GeofenceRequestStatus.INITIAL)
-    val geoFenceRequestCreated get() = _geoFenceRequestCreated
+    private var _geoFenceRequestStatusFlow = MutableStateFlow(GeofenceRequestStatus.INITIAL)
+    val geoFenceRequestStatusFlow get() = _geoFenceRequestStatusFlow
 
 
     private var _geoFenceEventFlow = MutableStateFlow(GeoTagrEvent(GeofenceEvent.INITIAL, ""))
@@ -88,9 +90,17 @@ class LocationManager(context: Context, val externalScope: CoroutineScope) {
         }
     }
 
+    fun cancelGeofence() {
+        locationClient.removeLocationUpdates(locationUpdateCallback).addOnSuccessListener {
+            externalScope.launch {
+                _geoFenceRequestStatusFlow.emit(GeofenceRequestStatus.CANCELLED)
+            }
+        }
+    }
+
     private fun resetEvents() {
         externalScope.launch {
-            _geoFenceRequestCreated.emit(GeofenceRequestStatus.INITIAL)
+            _geoFenceRequestStatusFlow.emit(GeofenceRequestStatus.INITIAL)
             _geoFenceEventFlow.emit(GeoTagrEvent(GeofenceEvent.INITIAL, ""))
         }
     }
@@ -98,21 +108,21 @@ class LocationManager(context: Context, val externalScope: CoroutineScope) {
     @SuppressLint("MissingPermission")
     private fun createLocationUpdateRequest() {
         val locationRequest = LocationRequest
-            .Builder(Priority.PRIORITY_HIGH_ACCURACY, 2000).build()
+            .Builder(Priority.PRIORITY_HIGH_ACCURACY, LOCATION_UPDATE_INTERVAL).build()
 
         locationClient.requestLocationUpdates(
             locationRequest, locationUpdateCallback, Looper.getMainLooper())
             .addOnSuccessListener {
                 Log.d(TAG, "Location update request created.")
                 externalScope.launch {
-                    _geoFenceRequestCreated.emit(GeofenceRequestStatus.SUCCESS)
+                    _geoFenceRequestStatusFlow.emit(GeofenceRequestStatus.SUCCESS)
                 }
             }
             .addOnFailureListener {
                 Log.e(TAG, "Location update request failed to create.")
 
                 externalScope.launch {
-                    _geoFenceRequestCreated.emit(GeofenceRequestStatus.FAIL)
+                    _geoFenceRequestStatusFlow.emit(GeofenceRequestStatus.FAIL)
                 }
             }
     }
@@ -124,8 +134,7 @@ class LocationManager(context: Context, val externalScope: CoroutineScope) {
         val a = sin(latitude / 2).pow(2.0) + (cos(originalLocation.latitude)
                 * cos(currentLocation.latitude) * sin(longitude / 2).pow(2.0))
         val circuit = (2 * asin(sqrt(a))).toFloat()
-        val earthRadiusMeters = 6371000.0F
 
-        return (circuit * earthRadiusMeters) < radiusInMeters
+        return (circuit * EARTH_RADIUS_METERS) < radiusInMeters
     }
 }

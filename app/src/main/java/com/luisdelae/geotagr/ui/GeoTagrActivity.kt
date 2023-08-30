@@ -9,7 +9,7 @@ import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import com.luisdelae.geotagr.R
 import com.luisdelae.geotagr.databinding.ActivityGeoTagrBinding
-import com.luisdelae.geotagr.services.GeoTagrLocationForegroundService
+import com.luisdelae.geotagr.service.GeoTagrLocationForegroundService
 import dagger.hilt.android.AndroidEntryPoint
 
 

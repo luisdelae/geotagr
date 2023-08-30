@@ -6,11 +6,16 @@
 
     <string name="title_activity_geo_tagr">GeoTagrActivity</string>
     <string name="geotagr_fragment_label">GeoTagr Fragment</string>
-    <string name="geotagr_entered_location">GeoTagr - Entered location</string>
+    <string name="geotagr_event">GeoTagr Event</string>
     <string name="geotagr_is_tracking_you_in_the_background">GeoTagr is tracking you in the background.</string>
     <string name="geofence_request_created">GeoFence request created</string>
     <string name="geofence_request_failed">GeoFence request failed</string>
+    <string name="geofence_request_cancelled">GeoFence request cancelled</string>
     <string name="entered_area">Entered area:\n%1$s</string>
     <string name="location_permissions_required">Location permissions required</string>
     <string name="background_location_permissions_required">Background location permissions required</string>
+
+    <string name="stop_location_updates_button_text">Cancel</string>
+    <string name="geofence_cancelled">Geofence cancelled.</string>
+    <string name="we_re_here">We\'re here!</string>
 </resources>

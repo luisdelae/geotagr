@@ -28,7 +28,7 @@
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyAq2esssGXDqe8N55hbZ0fK0xMHY61sAzg" />
 
-        <service android:name=".services.GeoTagrLocationForegroundService" android:foregroundServiceType="location" />
+        <service android:name=".service.GeoTagrLocationForegroundService" android:foregroundServiceType="location" />
 
         <activity
             android:name=".ui.GeoTagrActivity"

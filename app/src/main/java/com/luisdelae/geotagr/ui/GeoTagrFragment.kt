@@ -51,15 +51,21 @@ class GeoTagrFragment : Fragment() {
             it.isClickable = false
 
             val message = binding.editNotificationText.text.toString()
-            val radius = binding.editRadius.text.toString().toFloat()
+                .ifEmpty { getString(R.string.we_re_here) }
+            val radius = binding.editRadius.text.toString()
+                .toFloatOrNull() ?: 10F
 
             viewModel.tagLocation(GeofenceRequest(radius, message))
         }
 
         lifecycleScope.launch {
-            viewModel.geoFenceRequestCreatedFlow.collect { requestCreated ->
+            viewModel.geoFenceRequestStatusFlow.collect { requestCreated ->
                 when (requestCreated) {
                     GeofenceRequestStatus.INITIAL -> { }
+                    GeofenceRequestStatus.CANCELLED -> {
+                        Toast.makeText(requireContext(),
+                            getString(R.string.geofence_request_cancelled), Toast.LENGTH_SHORT).show()
+                    }
                     GeofenceRequestStatus.SUCCESS -> {
                         Toast.makeText(requireContext(),
                             getString(R.string.geofence_request_created), Toast.LENGTH_SHORT).show()

@@ -1,10 +1,11 @@
 @file:Suppress("PrivatePropertyName")
 
-package com.luisdelae.geotagr.services
+package com.luisdelae.geotagr.service
 
 import android.app.Notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.res.Configuration
@@ -16,7 +17,10 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.luisdelae.geotagr.R
 import com.luisdelae.geotagr.data.model.GeofenceEvent
+import com.luisdelae.geotagr.data.model.GeofenceRequestStatus
 import com.luisdelae.geotagr.data.repository.LocationRepository
+import com.luisdelae.geotagr.utils.Constants.FOREGROUND_SERVICE_NOTIFICATION_ID
+import com.luisdelae.geotagr.utils.Constants.GEOFENCE_NOTIFICATION_ID
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -25,8 +29,8 @@ import javax.inject.Inject
 class GeoTagrLocationForegroundService : LifecycleService() {
     private val TAG = "GeoTagrLocationService"
 
-    private val FOREGROUND_SERVICE_NOTIFICATION_ID = 3556465
-    private val GEOFENCE_NOTIFICATION_ID = 876021
+    private val EXTRA_CANCEL_LOCATION_TRACKING_FROM_NOTIFICATION =
+        "extra.CANCEL_LOCATION_TRACKING_FROM_NOTIFICATION"
 
     private val NOTIFICATION_CHANNEL_ID = "while_in_use_channel_01"
 
@@ -94,6 +98,34 @@ class GeoTagrLocationForegroundService : LifecycleService() {
 
         Log.d(TAG, "onStartCommand()")
 
+        lifecycleScope.launch {
+            locationRepository.geoFenceRequestStatusFlow.collect {
+                if (it == GeofenceRequestStatus.CANCELLED) {
+                    notificationManager.notify(
+                        GEOFENCE_NOTIFICATION_ID,
+                        generateGeofenceNotification(getString(R.string.geofence_cancelled))
+                    )
+                }
+            }
+        }
+
+        val cancelLocationTrackingFromNotification =
+            intent?.getBooleanExtra(EXTRA_CANCEL_LOCATION_TRACKING_FROM_NOTIFICATION, false)
+
+        if (cancelLocationTrackingFromNotification == true) {
+            cancelGeofence()
+        } else {
+            startForegroundService()
+        }
+
+        return START_NOT_STICKY
+    }
+
+    private fun cancelGeofence() {
+        locationRepository.cancelGeofence()
+    }
+
+    private fun startForegroundService() {
         if (!configurationChange) {
             Log.d(TAG, "Start foreground service")
 
@@ -116,27 +148,7 @@ class GeoTagrLocationForegroundService : LifecycleService() {
                 }
             }
         }
-
-        // Tells the system not to recreate the service after it's been killed.
-        return START_NOT_STICKY
     }
-
-//    fun startGeoTagrForegroundService() {
-//        startService(Intent(applicationContext, GeoTagrLocationForegroundService::class.java))
-//
-//        lifecycleScope.launch {
-//            locationRepository.isInGeofenceFlow.collect { enteredGeofence ->
-//                enteredGeofence?.let {
-//                    if (it && serviceRunningInForeground) {
-//                        notificationManager.notify(
-//                            GEOFENCE_NOTIFICATION_ID,
-//                            generateGeofenceNotification()
-//                        )
-//                    }
-//                }
-//            }
-//        }
-//    }
 
     override fun onDestroy() {
         super.onDestroy()
@@ -148,16 +160,8 @@ class GeoTagrLocationForegroundService : LifecycleService() {
         configurationChange = true
     }
 
-//    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
-//        super.onStartCommand(intent, flags, startId)
-//
-//        Log.d(TAG, "onStartCommand()")
-//
-//        return START_NOT_STICKY
-//    }
-
     private fun generateGeofenceNotification(message: String): Notification {
-        val title = getString(R.string.geotagr_entered_location)
+        val title = getString(R.string.geotagr_event)
 
         val notificationChannel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID, title, NotificationManager.IMPORTANCE_DEFAULT)
@@ -198,6 +202,12 @@ class GeoTagrLocationForegroundService : LifecycleService() {
         val notificationCompatBuilder =
             NotificationCompat.Builder(applicationContext, NOTIFICATION_CHANNEL_ID)
 
+        val cancelIntent = Intent(this, GeoTagrLocationForegroundService::class.java)
+        cancelIntent.putExtra(EXTRA_CANCEL_LOCATION_TRACKING_FROM_NOTIFICATION, true)
+
+        val servicePendingIntent = PendingIntent.getService(
+            this, 0, cancelIntent, PendingIntent.FLAG_IMMUTABLE)
+
         return notificationCompatBuilder
             .setStyle(bigTextStyle)
             .setContentTitle(title)
@@ -206,6 +216,11 @@ class GeoTagrLocationForegroundService : LifecycleService() {
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+            .addAction(
+                R.drawable.ic_cancel,
+                getString(R.string.stop_location_updates_button_text),
+                servicePendingIntent
+            )
             .build()
     }
 
