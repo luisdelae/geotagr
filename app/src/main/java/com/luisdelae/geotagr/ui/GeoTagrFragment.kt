@@ -2,6 +2,7 @@ package com.luisdelae.geotagr.ui
 
 import android.Manifest
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -10,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import com.luisdelae.geotagr.R
 import com.luisdelae.geotagr.data.model.GeofenceEvent
 import com.luisdelae.geotagr.data.model.GeofenceRequest
 import com.luisdelae.geotagr.data.model.GeofenceRequestStatus
@@ -59,11 +61,13 @@ class GeoTagrFragment : Fragment() {
                 when (requestCreated) {
                     GeofenceRequestStatus.INITIAL -> { }
                     GeofenceRequestStatus.SUCCESS -> {
-                        Toast.makeText(requireContext(), "GeoFence request created", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(),
+                            getString(R.string.geofence_request_created), Toast.LENGTH_SHORT).show()
                         binding.buttonFirst.isClickable = true
                     }
                     GeofenceRequestStatus.FAIL -> {
-                        Toast.makeText(requireContext(), "GeoFence request failed", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(requireContext(),
+                            getString(R.string.geofence_request_failed), Toast.LENGTH_SHORT).show()
                         binding.buttonFirst.isClickable = true
                     }
                 }
@@ -76,7 +80,7 @@ class GeoTagrFragment : Fragment() {
                     GeofenceEvent.INITIAL -> { }
                     GeofenceEvent.ENTER -> Toast.makeText(
                         requireContext(),
-                        "Entered area:\n${event.messageText}",
+                        getString(R.string.entered_area, event.messageText),
                         Toast.LENGTH_SHORT).show()
                     GeofenceEvent.EXIT -> { }
                 }
@@ -100,7 +104,8 @@ class GeoTagrFragment : Fragment() {
             permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
                 singleLocationPermissionRequest.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             } else -> {
-                Toast.makeText(requireContext(), "Location permissions required", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(),
+                    getString(R.string.location_permissions_required), Toast.LENGTH_SHORT).show()
             }
         }
     }
@@ -108,9 +113,10 @@ class GeoTagrFragment : Fragment() {
     private val singleLocationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()) { isGranted ->
             if (isGranted) {
-                Toast.makeText(requireContext(), "All permissions granted", Toast.LENGTH_SHORT).show()
+                Log.d("GeoTagrFragment", "All permissions granted")
             } else {
-                Toast.makeText(requireContext(), "Background location permissions required", Toast.LENGTH_SHORT).show()
+                Toast.makeText(requireContext(),
+                    getString(R.string.background_location_permissions_required), Toast.LENGTH_SHORT).show()
             }
         }
 }

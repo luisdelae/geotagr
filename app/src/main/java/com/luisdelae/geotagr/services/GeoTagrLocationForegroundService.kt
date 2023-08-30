@@ -157,7 +157,7 @@ class GeoTagrLocationForegroundService : LifecycleService() {
 //    }
 
     private fun generateGeofenceNotification(message: String): Notification {
-        val title = "Geofence Entered"
+        val title = getString(R.string.geotagr_entered_location)
 
         val notificationChannel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID, title, NotificationManager.IMPORTANCE_DEFAULT)
@@ -183,8 +183,8 @@ class GeoTagrLocationForegroundService : LifecycleService() {
     }
 
     private fun generateGeofenceServiceNotification(): Notification {
-        val title = "GeoTagr"
-        val body = "GeoTagr is tracking you in the background."
+        val title = getString(R.string.app_name)
+        val body = getString(R.string.geotagr_is_tracking_you_in_the_background)
 
         val notificationChannel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID, title, NotificationManager.IMPORTANCE_DEFAULT)
