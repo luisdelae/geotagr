@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">GeoTagr</string>
+    <string name="notification_text">Notification text</string>
+    <string name="enter_radius_in_meters">Radius in meters</string>
+    <string name="tag">TAG</string>
+
+    <string name="title_activity_geo_tagr">GeoTagrActivity</string>
+    <string name="geotagr_fragment_label">GeoTagr Fragment</string>
 </resources>
