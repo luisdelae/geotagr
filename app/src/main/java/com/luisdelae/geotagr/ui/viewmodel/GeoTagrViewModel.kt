@@ -2,9 +2,9 @@ package com.luisdelae.geotagr.ui.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.luisdelae.geotagr.data.LocationRepository
+import com.luisdelae.geotagr.data.model.GeofenceRequest
+import com.luisdelae.geotagr.data.repository.LocationRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -12,13 +12,13 @@ import javax.inject.Inject
 class GeoTagrViewModel @Inject internal constructor(
     private val locationRepository: LocationRepository
 ) : ViewModel() {
-    val geofenceRequestCreated: MutableStateFlow<Boolean?> = locationRepository.geoFenceRequestCreatedLiveData
+    val geoFenceRequestCreatedFlow = locationRepository.geoFenceRequestCreatedFlow
 
-    val isInGeofenceFlow: MutableStateFlow<Boolean?>  = locationRepository.isInGeofenceFlow
+    val geofenceEventFlow = locationRepository.geofenceEventFlow
 
-    fun tagLocation(radius: Float, geofenceNotificationMessage: String) {
+    fun tagLocation(geofenceRequest: GeofenceRequest) {
         viewModelScope.launch {
-            locationRepository.createGeoFenceOnCurrentLocation(radius, geofenceNotificationMessage)
+            locationRepository.createGeoFenceOnCurrentLocation(geofenceRequest)
         }
     }
 }

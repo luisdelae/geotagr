@@ -13,6 +13,10 @@ import com.google.android.gms.location.LocationResult
 import com.google.android.gms.location.LocationServices
 import com.google.android.gms.location.Priority
 import com.google.android.gms.tasks.CancellationTokenSource
+import com.luisdelae.geotagr.data.model.GeoTagrEvent
+import com.luisdelae.geotagr.data.model.GeofenceEvent
+import com.luisdelae.geotagr.data.model.GeofenceRequest
+import com.luisdelae.geotagr.data.model.GeofenceRequestStatus
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.launch
@@ -31,12 +35,12 @@ class LocationManager(context: Context, val externalScope: CoroutineScope) {
     private var _radiusInMeters = 10F
     private var _geofenceNotificationMessage = ""
 
-    private var _geoFenceRequestCreated = MutableStateFlow<Boolean?>(null)
+    private var _geoFenceRequestCreated = MutableStateFlow(GeofenceRequestStatus.INITIAL)
     val geoFenceRequestCreated get() = _geoFenceRequestCreated
 
 
-    private var _isInGeofenceFlow = MutableStateFlow<Boolean?>(null)
-    val isInGeofenceFlow get() = _isInGeofenceFlow
+    private var _geoFenceEventFlow = MutableStateFlow(GeoTagrEvent(GeofenceEvent.INITIAL, ""))
+    val geoFenceEventFlow get() = _geoFenceEventFlow
 
     private val locationUpdateCallback = object : LocationCallback() {
         override fun onLocationResult(locationResult: LocationResult) {
@@ -48,8 +52,17 @@ class LocationManager(context: Context, val externalScope: CoroutineScope) {
                 _originalLocation?.let { origLocation ->
                     val isWithinGeofence = isWithinGeoFence(origLocation, lastLocation, _radiusInMeters)
                     Log.d(TAG, "isWithinGeofence: $isWithinGeofence")
+
                     externalScope.launch {
-                        _isInGeofenceFlow.emit(isWithinGeofence)
+                        if (isWithinGeofence) {
+                            _geoFenceEventFlow.emit(
+                                GeoTagrEvent(GeofenceEvent.ENTER, _geofenceNotificationMessage)
+                            )
+                        } else {
+                            _geoFenceEventFlow.emit(
+                                GeoTagrEvent(GeofenceEvent.EXIT, _geofenceNotificationMessage)
+                            )
+                        }
                     }
                 }
             }
@@ -57,14 +70,11 @@ class LocationManager(context: Context, val externalScope: CoroutineScope) {
     }
 
     @SuppressLint("MissingPermission")
-    fun createGeofenceAroundCurrentLocation(
-        radiusInMeters: Float = 10.0f,
-        geofenceNotificationMessage: String = ""
-    ) {
-        resetFlows()
+    fun createGeofenceAroundCurrentLocation(geofenceRequest: GeofenceRequest) {
+        resetEvents()
 
-        _radiusInMeters = radiusInMeters
-        _geofenceNotificationMessage = geofenceNotificationMessage
+        _radiusInMeters = geofenceRequest.radius
+        _geofenceNotificationMessage = geofenceRequest.messageText
 
         locationClient.getCurrentLocation(
             Priority.PRIORITY_HIGH_ACCURACY,
@@ -78,10 +88,10 @@ class LocationManager(context: Context, val externalScope: CoroutineScope) {
         }
     }
 
-    private fun resetFlows() {
+    private fun resetEvents() {
         externalScope.launch {
-            _geoFenceRequestCreated.emit(null)
-            _isInGeofenceFlow.emit(null)
+            _geoFenceRequestCreated.emit(GeofenceRequestStatus.INITIAL)
+            _geoFenceEventFlow.emit(GeoTagrEvent(GeofenceEvent.INITIAL, ""))
         }
     }
 
@@ -95,14 +105,14 @@ class LocationManager(context: Context, val externalScope: CoroutineScope) {
             .addOnSuccessListener {
                 Log.d(TAG, "Location update request created.")
                 externalScope.launch {
-                    _geoFenceRequestCreated.emit(true)
+                    _geoFenceRequestCreated.emit(GeofenceRequestStatus.SUCCESS)
                 }
             }
             .addOnFailureListener {
-                Log.d(TAG, "Location update request failed to create.")
+                Log.e(TAG, "Location update request failed to create.")
 
                 externalScope.launch {
-                    _geoFenceRequestCreated.emit(false)
+                    _geoFenceRequestCreated.emit(GeofenceRequestStatus.FAIL)
                 }
             }
     }

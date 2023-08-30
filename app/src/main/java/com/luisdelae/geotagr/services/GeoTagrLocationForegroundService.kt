@@ -15,7 +15,8 @@ import androidx.core.app.NotificationCompat
 import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.luisdelae.geotagr.R
-import com.luisdelae.geotagr.data.LocationRepository
+import com.luisdelae.geotagr.data.model.GeofenceEvent
+import com.luisdelae.geotagr.data.repository.LocationRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -102,14 +103,16 @@ class GeoTagrLocationForegroundService : LifecycleService() {
         }
 
         lifecycleScope.launch {
-            locationRepository.isInGeofenceFlow.collect { enteredGeofence ->
-                enteredGeofence?.let {
-                    if (it) {
+            locationRepository.geofenceEventFlow.collect { event ->
+                when (event.geofenceEvent) {
+                    GeofenceEvent.INITIAL -> { }
+                    GeofenceEvent.ENTER -> {
                         notificationManager.notify(
                             GEOFENCE_NOTIFICATION_ID,
-                            generateGeofenceNotification()
+                            generateGeofenceNotification(event.messageText)
                         )
                     }
+                    GeofenceEvent.EXIT -> { }
                 }
             }
         }
@@ -118,22 +121,22 @@ class GeoTagrLocationForegroundService : LifecycleService() {
         return START_NOT_STICKY
     }
 
-    fun startGeoTagrForegroundService() {
-        startService(Intent(applicationContext, GeoTagrLocationForegroundService::class.java))
-
-        lifecycleScope.launch {
-            locationRepository.isInGeofenceFlow.collect { enteredGeofence ->
-                enteredGeofence?.let {
-                    if (it && serviceRunningInForeground) {
-                        notificationManager.notify(
-                            GEOFENCE_NOTIFICATION_ID,
-                            generateGeofenceNotification()
-                        )
-                    }
-                }
-            }
-        }
-    }
+//    fun startGeoTagrForegroundService() {
+//        startService(Intent(applicationContext, GeoTagrLocationForegroundService::class.java))
+//
+//        lifecycleScope.launch {
+//            locationRepository.isInGeofenceFlow.collect { enteredGeofence ->
+//                enteredGeofence?.let {
+//                    if (it && serviceRunningInForeground) {
+//                        notificationManager.notify(
+//                            GEOFENCE_NOTIFICATION_ID,
+//                            generateGeofenceNotification()
+//                        )
+//                    }
+//                }
+//            }
+//        }
+//    }
 
     override fun onDestroy() {
         super.onDestroy()
@@ -153,9 +156,8 @@ class GeoTagrLocationForegroundService : LifecycleService() {
 //        return START_NOT_STICKY
 //    }
 
-    private fun generateGeofenceNotification(): Notification {
+    private fun generateGeofenceNotification(message: String): Notification {
         val title = "Geofence Entered"
-        val body = "You have entered a place!"
 
         val notificationChannel = NotificationChannel(
             NOTIFICATION_CHANNEL_ID, title, NotificationManager.IMPORTANCE_DEFAULT)
@@ -163,7 +165,7 @@ class GeoTagrLocationForegroundService : LifecycleService() {
         notificationManager.createNotificationChannel(notificationChannel)
 
         val bigTextStyle = NotificationCompat.BigTextStyle()
-            .bigText(body)
+            .bigText(message)
             .setBigContentTitle(title)
 
         val notificationCompatBuilder =
@@ -172,7 +174,7 @@ class GeoTagrLocationForegroundService : LifecycleService() {
         return notificationCompatBuilder
             .setStyle(bigTextStyle)
             .setContentTitle(title)
-            .setContentText(body)
+            .setContentText(message)
             .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setOngoing(false)

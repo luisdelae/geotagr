@@ -10,6 +10,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import com.luisdelae.geotagr.data.model.GeofenceEvent
+import com.luisdelae.geotagr.data.model.GeofenceRequest
+import com.luisdelae.geotagr.data.model.GeofenceRequestStatus
 import com.luisdelae.geotagr.databinding.FragmentGeotagrBinding
 import com.luisdelae.geotagr.ui.viewmodel.GeoTagrViewModel
 import dagger.hilt.android.AndroidEntryPoint
@@ -43,32 +46,39 @@ class GeoTagrFragment : Fragment() {
         )
 
         binding.buttonFirst.setOnClickListener {
+            it.isClickable = false
+
             val message = binding.editNotificationText.text.toString()
             val radius = binding.editRadius.text.toString().toFloat()
 
-            viewModel.tagLocation(radius, message)
+            viewModel.tagLocation(GeofenceRequest(radius, message))
         }
 
         lifecycleScope.launch {
-            viewModel.geofenceRequestCreated.collect { requestCreated ->
-                requestCreated?.let {
-                    val createdText = if (it) {
-                        "successful"
-                    } else {
-                        "unsuccessful"
+            viewModel.geoFenceRequestCreatedFlow.collect { requestCreated ->
+                when (requestCreated) {
+                    GeofenceRequestStatus.INITIAL -> { }
+                    GeofenceRequestStatus.SUCCESS -> {
+                        Toast.makeText(requireContext(), "GeoFence request created", Toast.LENGTH_SHORT).show()
+                        binding.buttonFirst.isClickable = true
                     }
-
-                    Toast.makeText(requireContext(), "GeoFence request $createdText", Toast.LENGTH_SHORT).show()
+                    GeofenceRequestStatus.FAIL -> {
+                        Toast.makeText(requireContext(), "GeoFence request failed", Toast.LENGTH_SHORT).show()
+                        binding.buttonFirst.isClickable = true
+                    }
                 }
             }
         }
 
         lifecycleScope.launch {
-            viewModel.isInGeofenceFlow.collect { isWithinGeofence ->
-                isWithinGeofence?.let {
-                    if (it) {
-                        Toast.makeText(requireContext(), "Entered geofence", Toast.LENGTH_SHORT).show()
-                    }
+            viewModel.geofenceEventFlow.collect { event ->
+                when (event.geofenceEvent) {
+                    GeofenceEvent.INITIAL -> { }
+                    GeofenceEvent.ENTER -> Toast.makeText(
+                        requireContext(),
+                        "Entered area:\n${event.messageText}",
+                        Toast.LENGTH_SHORT).show()
+                    GeofenceEvent.EXIT -> { }
                 }
             }
         }
