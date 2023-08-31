@@ -30,6 +30,7 @@ import com.luisdelae.geotagr.ui.viewmodel.GeoTagrViewModel
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.launch
 
+
 @AndroidEntryPoint
 class GeoTagrFragment : Fragment() {
 
@@ -41,6 +42,8 @@ class GeoTagrFragment : Fragment() {
     private var foregroundOnlyLocationServiceBound = false
 
     private var foregroundOnlyLocationService: GeoTagrLocationForegroundService? = null
+
+    var uiInForeground = true
 
     private val foregroundOnlyServiceConnection = object : ServiceConnection {
 
@@ -106,19 +109,19 @@ class GeoTagrFragment : Fragment() {
                         binding.buttonCancel.visibility = GONE
                     }
                     GeofenceRequestStatus.CANCELLED -> {
-                        Toast.makeText(requireContext(),
+                        if (uiInForeground) Toast.makeText(requireContext(),
                             getString(R.string.geofence_request_cancelled), Toast.LENGTH_SHORT).show()
                         binding.buttonTag.isClickable = true
                         binding.buttonCancel.visibility = GONE
                     }
                     GeofenceRequestStatus.SUCCESS -> {
-                        Toast.makeText(requireContext(),
+                        if (uiInForeground) Toast.makeText(requireContext(),
                             getString(R.string.geofence_request_created), Toast.LENGTH_SHORT).show()
                         binding.buttonTag.isClickable = true
                         binding.buttonCancel.visibility = VISIBLE
                     }
                     GeofenceRequestStatus.FAIL -> {
-                        Toast.makeText(requireContext(),
+                        if (uiInForeground) Toast.makeText(requireContext(),
                             getString(R.string.geofence_request_failed), Toast.LENGTH_SHORT).show()
                         binding.buttonTag.isClickable = true
                         binding.buttonCancel.visibility = GONE
@@ -131,10 +134,11 @@ class GeoTagrFragment : Fragment() {
             viewModel.geofenceEventFlow.collect { event ->
                 when (event.geofenceEvent) {
                     GeofenceEvent.INITIAL -> { }
-                    GeofenceEvent.ENTER -> Toast.makeText(
-                        requireContext(),
-                        getString(R.string.entered_area, event.messageText),
-                        Toast.LENGTH_SHORT).show()
+                    GeofenceEvent.ENTER ->
+                        if (uiInForeground) Toast.makeText(
+                            requireContext(),
+                            getString(R.string.entered_area, event.messageText),
+                            Toast.LENGTH_SHORT).show()
                     GeofenceEvent.EXIT -> { }
                 }
             }
@@ -144,12 +148,16 @@ class GeoTagrFragment : Fragment() {
     override fun onStart() {
         super.onStart()
 
+        uiInForeground = true
+
         val serviceIntent = Intent(requireContext(), GeoTagrLocationForegroundService::class.java)
         requireActivity().bindService(serviceIntent, foregroundOnlyServiceConnection, Context.BIND_AUTO_CREATE)
     }
 
     override fun onStop() {
         super.onStop()
+
+        uiInForeground = false
 
         if (foregroundOnlyLocationServiceBound) {
             requireActivity().unbindService(foregroundOnlyServiceConnection)
@@ -172,7 +180,7 @@ class GeoTagrFragment : Fragment() {
             permissions.getOrDefault(Manifest.permission.ACCESS_COARSE_LOCATION, false) -> {
                 singleLocationPermissionRequest.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             } else -> {
-                Toast.makeText(requireContext(),
+            if (uiInForeground) Toast.makeText(requireContext(),
                     getString(R.string.location_permissions_required), Toast.LENGTH_SHORT).show()
             }
         }
@@ -181,7 +189,7 @@ class GeoTagrFragment : Fragment() {
     private val singleLocationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestPermission()) { isGranted ->
             if (!isGranted) {
-                Toast.makeText(requireContext(),
+                if (uiInForeground)  Toast.makeText(requireContext(),
                     getString(R.string.background_location_permissions_required), Toast.LENGTH_SHORT).show()
             }
     }
