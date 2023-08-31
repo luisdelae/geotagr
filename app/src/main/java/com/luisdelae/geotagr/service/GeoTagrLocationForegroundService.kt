@@ -17,7 +17,6 @@ import androidx.lifecycle.LifecycleService
 import androidx.lifecycle.lifecycleScope
 import com.luisdelae.geotagr.R
 import com.luisdelae.geotagr.data.model.GeofenceEvent
-import com.luisdelae.geotagr.data.model.GeofenceRequestStatus
 import com.luisdelae.geotagr.data.repository.LocationRepository
 import com.luisdelae.geotagr.utils.Constants.FOREGROUND_SERVICE_NOTIFICATION_ID
 import com.luisdelae.geotagr.utils.Constants.GEOFENCE_NOTIFICATION_ID
@@ -65,8 +64,6 @@ class GeoTagrLocationForegroundService : LifecycleService() {
     override fun onRebind(intent: Intent) {
         Log.d(TAG, "onRebind()")
 
-        // MainActivity (client) returns to the foreground and rebinds to service, so the service
-        // can become a background services.
         stopForeground(STOP_FOREGROUND_REMOVE)
         serviceRunningInForeground = false
         configurationChange = false
@@ -77,19 +74,15 @@ class GeoTagrLocationForegroundService : LifecycleService() {
     override fun onUnbind(intent: Intent): Boolean {
         Log.d(TAG, "onUnbind()")
 
-        // MainActivity (client) leaves foreground, so service needs to become a foreground service
-        // to maintain the 'while-in-use' label.
-        // NOTE: If this method is called due to a configuration change in MainActivity,
-        // we do nothing.
         if (!configurationChange) {
             Log.d(TAG, "Start foreground service")
 
             val notification = generateGeofenceServiceNotification()
             startForeground(FOREGROUND_SERVICE_NOTIFICATION_ID, notification)
+
             serviceRunningInForeground = true
         }
 
-        // Ensures onRebind() is called if MainActivity (client) rebinds.
         return true
     }
 
@@ -98,66 +91,56 @@ class GeoTagrLocationForegroundService : LifecycleService() {
 
         Log.d(TAG, "onStartCommand()")
 
-        lifecycleScope.launch {
-            locationRepository.geoFenceRequestStatusFlow.collect {
-                if (it == GeofenceRequestStatus.CANCELLED || it == GeofenceRequestStatus.FAIL) {
-                    notificationManager.notify(
-                        GEOFENCE_NOTIFICATION_ID,
-                        generateGeofenceNotification(getString(R.string.geofence_cancelled))
-                    )
-
-                    notificationManager.notify(
-                        FOREGROUND_SERVICE_NOTIFICATION_ID,
-                        generateGeofenceServiceNotification(false)
-                    )
-                } else if (it == GeofenceRequestStatus.SUCCESS) {
-                    notificationManager.notify(
-                        FOREGROUND_SERVICE_NOTIFICATION_ID,
-                        generateGeofenceServiceNotification(true)
-                    )
-                }
-            }
-        }
-
         val cancelLocationTrackingFromNotification =
             intent?.getBooleanExtra(EXTRA_CANCEL_LOCATION_TRACKING_FROM_NOTIFICATION, false)
 
         if (cancelLocationTrackingFromNotification == true) {
-            cancelGeofence()
-        } else {
-            startForegroundService()
+            unsubscribeToLocationUpdates()
+            stopSelf()
         }
 
         return START_NOT_STICKY
     }
 
-    private fun cancelGeofence() {
-        locationRepository.cancelGeofence()
-    }
+    fun subscribeToLocationUpdates() {
+        Log.d(TAG, "subscribeToLocationUpdates()")
 
-    private fun startForegroundService() {
-        if (!configurationChange) {
-            Log.d(TAG, "Start foreground service")
+        startService(Intent(applicationContext, GeoTagrLocationForegroundService::class.java))
 
-            val notification = generateGeofenceServiceNotification(false)
-            startForeground(FOREGROUND_SERVICE_NOTIFICATION_ID, notification)
-            serviceRunningInForeground = true
-        }
-
-        lifecycleScope.launch {
-            locationRepository.geofenceEventFlow.collect { event ->
-                when (event.geofenceEvent) {
-                    GeofenceEvent.INITIAL -> { }
-                    GeofenceEvent.ENTER -> {
-                        notificationManager.notify(
-                            GEOFENCE_NOTIFICATION_ID,
-                            generateGeofenceNotification(event.messageText)
-                        )
+        try {
+            // TODO: Step 1.5, Subscribe to location changes.
+            lifecycleScope.launch {
+                locationRepository.geofenceEventFlow.collect { event ->
+                    when (event.geofenceEvent) {
+                        GeofenceEvent.INITIAL -> { }
+                        GeofenceEvent.ENTER -> {
+                            notificationManager.notify(
+                                GEOFENCE_NOTIFICATION_ID,
+                                generateGeofenceNotification(event.messageText)
+                            )
+                        }
+                        GeofenceEvent.EXIT -> { }
                     }
-                    GeofenceEvent.EXIT -> { }
                 }
             }
+        } catch (unlikely: SecurityException) {
+            Log.e(TAG, "Lost location permissions. Couldn't remove updates. $unlikely")
         }
+    }
+
+    fun unsubscribeToLocationUpdates() {
+        Log.d(TAG, "unsubscribeToLocationUpdates()")
+
+        try {
+            // TODO: Step 1.6, Unsubscribe to location changes.
+            cancelGeofence()
+        } catch (unlikely: SecurityException) {
+            Log.e(TAG, "Lost location permissions. Couldn't remove updates. $unlikely")
+        }
+    }
+
+    private fun cancelGeofence() {
+        locationRepository.cancelGeofence()
     }
 
     override fun onDestroy() {
@@ -196,7 +179,7 @@ class GeoTagrLocationForegroundService : LifecycleService() {
             .build()
     }
 
-    private fun generateGeofenceServiceNotification(showCancel: Boolean = true): Notification {
+    private fun generateGeofenceServiceNotification(): Notification {
         val title = getString(R.string.app_name)
         val body = getString(R.string.geotagr_is_tracking_you_in_the_background)
 
@@ -218,7 +201,7 @@ class GeoTagrLocationForegroundService : LifecycleService() {
         val servicePendingIntent = PendingIntent.getService(
             this, 0, cancelIntent, PendingIntent.FLAG_IMMUTABLE)
 
-        val notificationBuilder = notificationCompatBuilder
+        return notificationCompatBuilder
             .setStyle(bigTextStyle)
             .setContentTitle(title)
             .setContentText(body)
@@ -226,13 +209,11 @@ class GeoTagrLocationForegroundService : LifecycleService() {
             .setDefaults(NotificationCompat.DEFAULT_ALL)
             .setOngoing(true)
             .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-
-        if (showCancel) notificationBuilder.addAction(
+            .addAction(
                 R.drawable.ic_cancel,
                 getString(R.string.stop_location_updates_button_text),
                 servicePendingIntent)
-
-        return notificationBuilder.build()
+            .build()
     }
 
     inner class LocalBinder : Binder() {

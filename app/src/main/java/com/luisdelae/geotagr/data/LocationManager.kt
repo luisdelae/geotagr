@@ -52,10 +52,10 @@ class LocationManager(context: Context, val externalScope: CoroutineScope) {
                 Log.d(TAG, "$lastLocation")
 
                 _originalLocation?.let { origLocation ->
-                    val isWithinGeofence = isWithinGeoFence(origLocation, lastLocation, _radiusInMeters)
-                    Log.d(TAG, "isWithinGeofence: $isWithinGeofence")
-
                     externalScope.launch {
+                        val isWithinGeofence = isWithinGeoFence(origLocation, lastLocation, _radiusInMeters)
+                        Log.d(TAG, "isWithinGeofence: $isWithinGeofence")
+
                         if (isWithinGeofence) {
                             _geoFenceEventFlow.emit(
                                 GeoTagrEvent(GeofenceEvent.ENTER, _geofenceNotificationMessage)

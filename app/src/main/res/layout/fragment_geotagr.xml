@@ -40,7 +40,7 @@
             android:inputType="number"
             android:digits="0123456789"
             android:maxLines="1"
-            android:maxLength="2"
+            android:maxLength="3"
             android:hint="@string/enter_radius_in_meters" />
     </com.google.android.material.textfield.TextInputLayout>
 
