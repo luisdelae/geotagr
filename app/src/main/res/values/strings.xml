@@ -17,5 +17,7 @@
 
     <string name="stop_location_updates_button_text">Cancel</string>
     <string name="geofence_cancelled">Geofence cancelled.</string>
-    <string name="we_re_here">We\'re here!</string>
+    <string name="we_are_here">We\'re here!</string>
+
+    <string name="cancel_geofence">Cancel</string>
 </resources>

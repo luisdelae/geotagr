@@ -1,10 +1,13 @@
 package com.luisdelae.geotagr.ui
 
 import android.Manifest
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
+import android.view.View.GONE
+import android.view.View.VISIBLE
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
@@ -41,40 +44,53 @@ class GeoTagrFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        locationPermissionRequest.launch(
-            arrayOf(Manifest.permission.ACCESS_FINE_LOCATION,
-                Manifest.permission.ACCESS_COARSE_LOCATION,
-                Manifest.permission.POST_NOTIFICATIONS)
-        )
+        val permissionsList = mutableListOf(Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION)
 
-        binding.buttonFirst.setOnClickListener {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            permissionsList.add(Manifest.permission.POST_NOTIFICATIONS)
+        }
+
+        locationPermissionRequest.launch(permissionsList.toTypedArray())
+
+        binding.buttonTag.setOnClickListener {
             it.isClickable = false
 
             val message = binding.editNotificationText.text.toString()
-                .ifEmpty { getString(R.string.we_re_here) }
+                .ifEmpty { getString(R.string.we_are_here) }
             val radius = binding.editRadius.text.toString()
                 .toFloatOrNull() ?: 10F
 
             viewModel.tagLocation(GeofenceRequest(radius, message))
         }
 
+        binding.buttonCancel.setOnClickListener {
+            viewModel.cancelGeotag()
+        }
+
         lifecycleScope.launch {
             viewModel.geoFenceRequestStatusFlow.collect { requestCreated ->
                 when (requestCreated) {
-                    GeofenceRequestStatus.INITIAL -> { }
+                    GeofenceRequestStatus.INITIAL -> {
+                        binding.buttonCancel.visibility = GONE
+                    }
                     GeofenceRequestStatus.CANCELLED -> {
                         Toast.makeText(requireContext(),
                             getString(R.string.geofence_request_cancelled), Toast.LENGTH_SHORT).show()
+                        binding.buttonTag.isClickable = true
+                        binding.buttonCancel.visibility = GONE
                     }
                     GeofenceRequestStatus.SUCCESS -> {
                         Toast.makeText(requireContext(),
                             getString(R.string.geofence_request_created), Toast.LENGTH_SHORT).show()
-                        binding.buttonFirst.isClickable = true
+                        binding.buttonTag.isClickable = true
+                        binding.buttonCancel.visibility = VISIBLE
                     }
                     GeofenceRequestStatus.FAIL -> {
                         Toast.makeText(requireContext(),
                             getString(R.string.geofence_request_failed), Toast.LENGTH_SHORT).show()
-                        binding.buttonFirst.isClickable = true
+                        binding.buttonTag.isClickable = true
+                        binding.buttonCancel.visibility = GONE
                     }
                 }
             }
@@ -99,7 +115,6 @@ class GeoTagrFragment : Fragment() {
         _binding = null
     }
 
-    // TODO: This works happy path. Test sad path.
     private val locationPermissionRequest = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
     ) { permissions ->

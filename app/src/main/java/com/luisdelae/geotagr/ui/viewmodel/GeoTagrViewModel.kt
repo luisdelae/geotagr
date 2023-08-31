@@ -21,4 +21,8 @@ class GeoTagrViewModel @Inject internal constructor(
             locationRepository.createGeoFenceOnCurrentLocation(geofenceRequest)
         }
     }
+
+    fun cancelGeotag() {
+        locationRepository.cancelGeofence()
+    }
 }
